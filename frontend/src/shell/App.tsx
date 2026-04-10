@@ -35,10 +35,13 @@ import {
   parseTargetButton,
   parseActionButton,
 } from '../renderer/panels/Leaderboard';
+import { drawAIChat } from '../renderer/panels/AIChatPanel';
 import {
   PhoenixClient,
   type LeaderboardEntry,
 } from '../network/PhoenixClient';
+import { Typewriter } from '../renderer/effects/Typewriter';
+import { pickLine } from '../data/meta-dialogue';
 import { drawBox } from '../renderer/widgets/Box';
 import { drawButton, type ButtonHitBox } from '../renderer/widgets/Button';
 import { drawSparkline } from '../renderer/widgets/Sparkline';
@@ -90,6 +93,10 @@ export function App() {
 
     engine.onEvent((e) => {
       events.push(e.message, e.kind);
+      // Era advance trigger chat comentando
+      if (e.message.startsWith('ERA ')) {
+        triggerChat();
+      }
     });
 
     const rateHistory: number[] = [];
@@ -98,6 +105,25 @@ export function App() {
     let prestigeOpen = false;
     let leaderboardOpen = false;
     let lastEra: EraId = engine.state.era as EraId;
+
+    // AI Chat (meta-humor) — typewriter + timer
+    const typewriter = new Typewriter(35);
+    typewriter.start('...');
+    let chatVisible = false;
+    let chatTimer = 5; // primeira fala em 5s
+    let chatHideTimer = 0;
+    const triggerChat = (textOverride?: string) => {
+      const line = textOverride
+        ? { text: textOverride, mood: 'neutral' as const }
+        : pickLine(engine.state.era as EraId);
+      typewriter.start(line.text);
+      chatVisible = true;
+      chatHideTimer = 8;
+    };
+    if (import.meta.env.DEV) {
+      (window as unknown as { __triggerChat: (t?: string) => void }).__triggerChat =
+        triggerChat;
+    }
 
     // --- PvP: conecta no backend Elixir ---
     if (!engine.state.playerId) {
@@ -244,6 +270,20 @@ export function App() {
       matrix.update(frameDelta);
       particles.update(frameDelta);
 
+      // AI Chat timer
+      typewriter.update(frameDelta);
+      if (chatVisible) {
+        chatHideTimer -= frameDelta;
+        if (chatHideTimer <= 0) chatVisible = false;
+      } else {
+        chatTimer -= frameDelta;
+        if (chatTimer <= 0) {
+          triggerChat();
+          // próxima fala em 20-60s
+          chatTimer = 20 + Math.random() * 40;
+        }
+      }
+
       grid.clear();
 
       // Top: resource bar com theme borders
@@ -313,6 +353,22 @@ export function App() {
       );
 
       drawEventLog(grid, 0, GRID_ROWS - 8, GRID_COLS, 8, events, theme.border);
+
+      // AI Chat balloon (logo acima do event log, lado direito)
+      if (chatVisible) {
+        const cw = 50;
+        const ch = 6;
+        const cx = GRID_COLS - cw - 2;
+        const cy = GRID_ROWS - 8 - ch;
+        // Limpa área antes de desenhar
+        for (let yy = cy; yy < cy + ch; yy++) {
+          for (let xx = cx; xx < cx + cw; xx++) {
+            grid.setChar(xx, yy, ' ');
+          }
+        }
+        const speaker = `◆ MODEL (era ${state.era})`;
+        drawAIChat(grid, cx, cy, cw, ch, typewriter, speaker, theme.border);
+      }
 
       // Matrix rain e particles
       matrix.draw(grid);
