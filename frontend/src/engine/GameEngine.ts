@@ -11,6 +11,7 @@ import { ResourceManager } from './resources/ResourceManager';
 import { UpgradeManager } from './upgrades/UpgradeManager';
 import { EraManager } from './eras/EraManager';
 import { PrestigeManager } from './prestige/PrestigeManager';
+import { RebornManager } from './reborn/RebornManager';
 import { SaveManager } from './state/SaveManager';
 import { Ticker } from './ticker';
 import { applyOfflineProgress, type OfflineReport } from './offline';
@@ -18,6 +19,7 @@ import { pickRandomEvent } from '../data/events';
 import { ERAS_BY_ID } from '../data/eras';
 import type { BuildingId } from '../data/buildings';
 import type { GameState } from './state/GameState';
+import { MLClient } from '../network/MLClient';
 
 export interface EngineEvent {
   kind: 'info' | 'warn' | 'crit' | 'good';
@@ -35,6 +37,8 @@ export class GameEngine {
   resources: ResourceManager;
   eras: EraManager;
   prestige: PrestigeManager;
+  reborn: RebornManager;
+  ml: MLClient;
   save: SaveManager;
   offlineReport: OfflineReport | null = null;
 
@@ -52,8 +56,19 @@ export class GameEngine {
     this.buildings = new BuildingManager();
     this.upgrades = new UpgradeManager();
     this.prestige = new PrestigeManager();
-    this.resources = new ResourceManager(this.buildings, this.upgrades, this.prestige);
-    this.eras = new EraManager();
+    this.reborn = new RebornManager();
+    this.buildings.setRebornManager(this.reborn);
+    this.ml = new MLClient();
+    this.resources = new ResourceManager(
+      this.buildings,
+      this.upgrades,
+      this.prestige,
+      this.reborn
+    );
+    this.eras = new EraManager(this.reborn);
+
+    // Kick off ML ping + evaluate cache async
+    this.pingMLAndSync();
     this.ticker = new Ticker(
       (delta) => this.tick(delta),
       () => this.render()
@@ -61,7 +76,12 @@ export class GameEngine {
 
     // Offline progress no load
     const baseRate = this.resources.getEffectiveTokenRate(this.state);
-    this.offlineReport = applyOfflineProgress(this.state, baseRate);
+    this.offlineReport = applyOfflineProgress(
+      this.state,
+      baseRate,
+      undefined,
+      this.reborn.hasOfflineMaster(this.state)
+    );
   }
 
   start(renderCb: () => void): void {
@@ -109,6 +129,48 @@ export class GameEngine {
     return this.prestige.buyPermanent(this.state, id);
   }
 
+  buyPerk(id: string): boolean {
+    return this.reborn.buyPerk(this.state, id);
+  }
+
+  async doReborn(): Promise<number> {
+    if (!this.reborn.canReborn(this.state)) return 0;
+    // Antes do reborn: treina o modelo real umas vezes + avalia
+    const playerId = this.state.playerId ?? crypto.randomUUID();
+    this.state.playerId = playerId;
+    if (await this.ml.ping()) {
+      // Treina 3 steps no reborn pra evoluir o modelo de verdade
+      for (let i = 0; i < 3; i++) {
+        const train = await this.ml.train(playerId);
+        if (train) this.state.mlStepsTrained = train.steps_trained;
+      }
+      const ev = await this.ml.evaluate(playerId);
+      if (ev) {
+        this.state.mlStepsTrained = ev.steps_trained;
+        this.state.mlCapabilityScore = ev.capability_score;
+      }
+    } else {
+      // Sem ML service: simula 3 steps mesmo assim
+      this.state.mlStepsTrained += 3;
+    }
+    const { rpGained, newRebornCount } = this.reborn.reborn(this.state);
+    this.emit({
+      kind: 'good',
+      message: `REBORN #${newRebornCount}: +${rpGained} RP (ML steps: ${this.state.mlStepsTrained})`,
+    });
+    return rpGained;
+  }
+
+  async pingMLAndSync(): Promise<void> {
+    if (!(await this.ml.ping())) return;
+    if (!this.state.playerId) this.state.playerId = crypto.randomUUID();
+    const ev = await this.ml.evaluate(this.state.playerId);
+    if (ev) {
+      this.state.mlStepsTrained = ev.steps_trained;
+      this.state.mlCapabilityScore = ev.capability_score;
+    }
+  }
+
   /** Capability score para ranking PvP. */
   getCapabilityScore(): number {
     const baseRate = this.resources.getEffectiveTokenRate(this.state);
@@ -135,8 +197,9 @@ export class GameEngine {
   }
 
   click(): void {
-    const bonus = Math.max(1, this.upgrades.getTokensMultiplier(this.state));
-    this.resources.addTokens(this.state, bonus);
+    const upgradeMult = Math.max(1, this.upgrades.getTokensMultiplier(this.state));
+    const perkBonus = this.reborn.getClickBonus(this.state);
+    this.resources.addTokens(this.state, upgradeMult + perkBonus);
   }
 
   // ============================================================

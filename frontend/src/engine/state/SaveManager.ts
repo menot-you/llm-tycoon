@@ -55,7 +55,23 @@ export class SaveManager {
   /** Migra saves antigos pra versão atual. */
   private migrate(state: GameState): GameState {
     if (state.version === SAVE_VERSION) return state;
-    // Wave 1: ainda não há migrations
+
+    // v1 -> v2: adiciona campos de reborn
+    if (state.version === 1) {
+      const migrated: GameState = {
+        ...createInitialState(),
+        ...state,
+        version: 2,
+        rebornCount: 0,
+        rebornPoints: 0,
+        unlockedPerks: [],
+        totalPrestigesAllTime: state.prestigeCount ?? 0,
+        mlStepsTrained: 0,
+        mlCapabilityScore: 0,
+      };
+      return migrated;
+    }
+
     console.warn(`Save version ${state.version} ≠ ${SAVE_VERSION}, resetando`);
     return createInitialState();
   }

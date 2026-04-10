@@ -18,6 +18,7 @@ import {
 } from '../../lib/constants';
 import type { BuildingManager } from '../buildings/BuildingManager';
 import type { PrestigeManager } from '../prestige/PrestigeManager';
+import type { RebornManager } from '../reborn/RebornManager';
 import type { UpgradeManager } from '../upgrades/UpgradeManager';
 import type { GameState } from '../state/GameState';
 
@@ -25,7 +26,8 @@ export class ResourceManager {
   constructor(
     private buildings: BuildingManager,
     private upgrades: UpgradeManager,
-    private prestige?: PrestigeManager
+    private prestige?: PrestigeManager,
+    private reborn?: RebornManager
   ) {}
 
   /** Tokens/s efetivos (com todos os multiplicadores). */
@@ -35,8 +37,18 @@ export class ResourceManager {
     const eraMult = this.getEraMultiplier(state);
     const prestigeMult = 1 + state.insightPoints * 0.05;
     const permanentMult = this.prestige?.getProductionMultiplier(state) ?? 1;
+    const neuralMult = this.reborn?.getNeuralMultiplier(state) ?? 1;
+    const compoundMult = this.reborn?.getCompoundPrestigeMultiplier(state) ?? 1;
+    const autoClick = this.reborn?.getAutoClickRate(state) ?? 0;
     const hallucinationDrain = state.resources.hallucinations * HALLUCINATION_DRAIN_FACTOR;
-    const gross = baseRate * mult * eraMult * prestigeMult * permanentMult;
+    const gross =
+      (baseRate + autoClick) *
+      mult *
+      eraMult *
+      prestigeMult *
+      permanentMult *
+      neuralMult *
+      compoundMult;
     return Math.max(0, gross - gross * hallucinationDrain);
   }
 

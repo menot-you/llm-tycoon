@@ -26,7 +26,8 @@ export interface OfflineReport {
 export function applyOfflineProgress(
   state: GameState,
   tokenRatePerSecond: number,
-  now: number = Date.now()
+  now: number = Date.now(),
+  offlineMaster = false
 ): OfflineReport {
   const elapsedMs = now - state.lastTick;
   if (elapsedMs <= 0) {
@@ -38,9 +39,14 @@ export function applyOfflineProgress(
   const offlineSeconds = cappedMs / 1000;
   const capped = elapsedMs > maxMs;
 
-  // Eficiência sobe com insightPoints (max 0.8)
-  const prestigeBoost = Math.min(0.3, state.insightPoints * 0.01);
-  const efficiency = Math.min(OFFLINE_MAX_EFFICIENCY, OFFLINE_BASE_EFFICIENCY + prestigeBoost);
+  // Offline Master perk: 100% eficiência
+  let efficiency: number;
+  if (offlineMaster) {
+    efficiency = 1;
+  } else {
+    const prestigeBoost = Math.min(0.3, state.insightPoints * 0.01);
+    efficiency = Math.min(OFFLINE_MAX_EFFICIENCY, OFFLINE_BASE_EFFICIENCY + prestigeBoost);
+  }
 
   const tokensEarned = tokenRatePerSecond * offlineSeconds * efficiency;
   state.resources.tokens += tokensEarned;

@@ -9,7 +9,7 @@ import type { BuildingId } from '../../data/buildings';
 import type { EraId } from '../../data/eras';
 
 /** Versão do save format — incrementa quando muda shape pra migrations */
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export interface Resources {
   tokens: number;
@@ -46,6 +46,14 @@ export interface GameState {
   insightPoints: number;
   permanentUpgrades: string[];
 
+  // Reborn (meta-prestige)
+  rebornCount: number;
+  rebornPoints: number;
+  unlockedPerks: string[]; // array of perk IDs (duplicados pra stacks)
+  totalPrestigesAllTime: number; // acumulado entre reborns
+  mlStepsTrained: number; // sincronizado com Python /evaluate
+  mlCapabilityScore: number;
+
   // Player identity (PvP)
   playerId: string | null;
   displayName: string;
@@ -71,6 +79,12 @@ export const INITIAL_STATE: GameState = {
   prestigeCount: 0,
   insightPoints: 0,
   permanentUpgrades: [],
+  rebornCount: 0,
+  rebornPoints: 0,
+  unlockedPerks: [],
+  totalPrestigesAllTime: 0,
+  mlStepsTrained: 0,
+  mlCapabilityScore: 0,
   playerId: null,
   displayName: 'Anonymous Founder',
 };

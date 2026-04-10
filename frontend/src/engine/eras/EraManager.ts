@@ -5,6 +5,7 @@
  */
 
 import { ERAS, ERAS_BY_ID, type EraId } from '../../data/eras';
+import type { RebornManager } from '../reborn/RebornManager';
 import type { GameState } from '../state/GameState';
 
 export interface EraAdvance {
@@ -13,6 +14,13 @@ export interface EraAdvance {
 }
 
 export class EraManager {
+  constructor(private reborn?: RebornManager) {}
+
+  private effectiveThreshold(state: GameState, raw: number): number {
+    const discount = this.reborn?.getEraDiscount(state) ?? 0;
+    return raw * (1 - discount);
+  }
+
   /** Verifica se o player pode avançar e aplica. Retorna o novo era se houve mudança. */
   checkAdvance(state: GameState): EraAdvance | null {
     const current = state.era;
@@ -22,7 +30,7 @@ export class EraManager {
     const next = ERAS_BY_ID[nextId];
     if (!next) return null;
 
-    if (state.totalTokensEarned >= next.unlockThreshold) {
+    if (state.totalTokensEarned >= this.effectiveThreshold(state, next.unlockThreshold)) {
       state.era = nextId;
       return { from: current, to: nextId };
     }
@@ -35,8 +43,10 @@ export class EraManager {
     const current = ERAS_BY_ID[state.era];
     const next = ERAS_BY_ID[(state.era + 1) as EraId];
     if (!next) return 1;
-    const range = next.unlockThreshold - current.unlockThreshold;
-    const progress = state.totalTokensEarned - current.unlockThreshold;
+    const nextThreshold = this.effectiveThreshold(state, next.unlockThreshold);
+    const currentThreshold = this.effectiveThreshold(state, current.unlockThreshold);
+    const range = nextThreshold - currentThreshold;
+    const progress = state.totalTokensEarned - currentThreshold;
     return Math.max(0, Math.min(1, progress / range));
   }
 

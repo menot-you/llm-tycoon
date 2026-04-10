@@ -7,6 +7,7 @@
 
 import { BUILDINGS_BY_ID, type BuildingId } from '../../data/buildings';
 import { buildingCost, buildingProduction } from '../resources/formulas';
+import type { RebornManager } from '../reborn/RebornManager';
 import type { GameState } from '../state/GameState';
 
 export interface BuyResult {
@@ -16,17 +17,25 @@ export interface BuyResult {
 }
 
 export class BuildingManager {
+  private reborn?: RebornManager;
+
+  setRebornManager(r: RebornManager): void {
+    this.reborn = r;
+  }
+
   /** Quantos buildings desse tipo o player tem. */
   getOwned(state: GameState, id: BuildingId): number {
     return state.buildings[id] ?? 0;
   }
 
-  /** Custo do PRÓXIMO building desse tipo. */
+  /** Custo do PRÓXIMO building desse tipo (com desconto de perks). */
   getCost(state: GameState, id: BuildingId): number {
     const def = BUILDINGS_BY_ID[id];
     if (!def) return Infinity;
     const owned = this.getOwned(state, id);
-    return buildingCost(def.baseCost, def.costGrowth, owned);
+    const raw = buildingCost(def.baseCost, def.costGrowth, owned);
+    const discount = this.reborn?.getBuildingDiscount(state) ?? 0;
+    return Math.floor(raw * (1 - discount));
   }
 
   /** True se o player tem tokens pra comprar e a era permite. */

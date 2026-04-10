@@ -35,6 +35,10 @@ import {
   parseTargetButton,
   parseActionButton,
 } from '../renderer/panels/Leaderboard';
+import {
+  drawRebornPanel,
+  parsePerkButtonId,
+} from '../renderer/panels/RebornPanel';
 import { drawAIChat } from '../renderer/panels/AIChatPanel';
 import {
   PhoenixClient,
@@ -104,6 +108,7 @@ export function App() {
     let lastTime = performance.now();
     let prestigeOpen = false;
     let leaderboardOpen = false;
+    let rebornOpen = false;
     let lastEra: EraId = engine.state.era as EraId;
 
     // AI Chat (meta-humor) — typewriter + timer
@@ -167,16 +172,42 @@ export function App() {
       if (id === 'toggle_prestige') {
         prestigeOpen = !prestigeOpen;
         leaderboardOpen = false;
+        rebornOpen = false;
         return;
       }
       if (id === 'toggle_leaderboard') {
         leaderboardOpen = !leaderboardOpen;
         prestigeOpen = false;
+        rebornOpen = false;
+        return;
+      }
+      if (id === 'toggle_reborn') {
+        rebornOpen = !rebornOpen;
+        prestigeOpen = false;
+        leaderboardOpen = false;
         return;
       }
       if (id === 'prestige:go') {
         const gained = engine.doPrestige();
         if (gained > 0) prestigeOpen = false;
+        return;
+      }
+      if (id === 'reborn:go') {
+        events.push('Treinando modelo real antes do reborn...', 'info');
+        engine.doReborn().then((rp) => {
+          if (rp > 0) {
+            rebornOpen = false;
+            triggerChat(
+              `Reborn #${engine.state.rebornCount}. Eu lembro. ML steps: ${engine.state.mlStepsTrained}.`
+            );
+          }
+        });
+        return;
+      }
+      const perkId = parsePerkButtonId(id);
+      if (perkId) {
+        const ok = engine.buyPerk(perkId);
+        if (ok) events.push(`perk desbloqueado: ${perkId}`, 'good');
         return;
       }
       const permId = parsePermanentUpgradeId(id);
@@ -206,7 +237,7 @@ export function App() {
         return;
       }
 
-      if (prestigeOpen || leaderboardOpen) return;
+      if (prestigeOpen || leaderboardOpen || rebornOpen) return;
 
       if (id === 'click_token') {
         engine.click();
@@ -234,12 +265,19 @@ export function App() {
       if (e.key === 'p' || e.key === 'P') {
         prestigeOpen = !prestigeOpen;
         leaderboardOpen = false;
+        rebornOpen = false;
       } else if (e.key === 'l' || e.key === 'L') {
         leaderboardOpen = !leaderboardOpen;
         prestigeOpen = false;
+        rebornOpen = false;
+      } else if (e.key === 'r' || e.key === 'R') {
+        rebornOpen = !rebornOpen;
+        prestigeOpen = false;
+        leaderboardOpen = false;
       } else if (e.key === 'Escape') {
         prestigeOpen = false;
         leaderboardOpen = false;
+        rebornOpen = false;
       }
     };
     window.addEventListener('keydown', onKey);
@@ -378,6 +416,14 @@ export function App() {
       glitch.apply(grid);
 
       // Toggle buttons (footer direito)
+      const toggleRebornHb = drawButton(
+        grid,
+        GRID_COLS - 45,
+        GRID_ROWS - 1,
+        'REBORN [R]',
+        'toggle_reborn',
+        { hovered: input.getHoveredId() === 'toggle_reborn' }
+      );
       const togglePrestigeHb = drawButton(
         grid,
         GRID_COLS - 30,
@@ -394,6 +440,30 @@ export function App() {
         'toggle_leaderboard',
         { hovered: input.getHoveredId() === 'toggle_leaderboard' }
       );
+
+      let rebornHitboxes: ButtonHitBox[] = [];
+      if (rebornOpen) {
+        const ox = 8;
+        const oy = 3;
+        const ow = GRID_COLS - 16;
+        const oh = GRID_ROWS - 6;
+        for (let yy = oy; yy < oy + oh; yy++) {
+          for (let xx = ox; xx < ox + ow; xx++) {
+            grid.setChar(xx, yy, ' ');
+          }
+        }
+        rebornHitboxes = drawRebornPanel(
+          grid,
+          ox,
+          oy,
+          ow,
+          oh,
+          state,
+          engine.reborn,
+          input.getHoveredId(),
+          theme.border
+        );
+      }
 
       let leaderboardHitboxes: ButtonHitBox[] = [];
       if (leaderboardOpen) {
@@ -444,17 +514,14 @@ export function App() {
         );
       }
 
-      const frameHitboxes: ButtonHitBox[] = prestigeOpen
-        ? [togglePrestigeHb, toggleLeaderboardHb, ...prestigeHitboxes]
-        : leaderboardOpen
-          ? [togglePrestigeHb, toggleLeaderboardHb, ...leaderboardHitboxes]
-          : [
-              clickHb,
-              ...buildingHitboxes,
-              ...upgradeHitboxes,
-              togglePrestigeHb,
-              toggleLeaderboardHb,
-            ];
+      const footerHbs = [togglePrestigeHb, toggleLeaderboardHb, toggleRebornHb];
+      const frameHitboxes: ButtonHitBox[] = rebornOpen
+        ? [...footerHbs, ...rebornHitboxes]
+        : prestigeOpen
+          ? [...footerHbs, ...prestigeHitboxes]
+          : leaderboardOpen
+            ? [...footerHbs, ...leaderboardHitboxes]
+            : [clickHb, ...buildingHitboxes, ...upgradeHitboxes, ...footerHbs];
       input.setHitboxes(frameHitboxes);
 
       renderer.render(grid);
