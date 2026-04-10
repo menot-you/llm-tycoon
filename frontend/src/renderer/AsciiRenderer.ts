@@ -7,43 +7,31 @@
 
 import { FONT_SIZE, LINE_HEIGHT, MONOSPACE_FONT } from '../lib/constants';
 import type { Grid } from './Grid';
-
-export interface RendererTheme {
-  background: string;
-  foreground: string;
-  accent: string;
-  dim: string;
-}
-
-export const DEFAULT_THEME: RendererTheme = {
-  background: '#0a0e14',
-  foreground: '#b3b1ad',
-  accent: '#39bae6',
-  dim: '#475266',
-};
+import { themeForEra, type EraTheme } from './themes';
 
 export class AsciiRenderer {
   private ctx: CanvasRenderingContext2D;
   private cellWidth = 0;
   private cellHeight = 0;
   private dpr: number;
-  private theme: RendererTheme;
+  theme: EraTheme;
 
-  constructor(
-    private canvas: HTMLCanvasElement,
-    theme: RendererTheme = DEFAULT_THEME
-  ) {
+  constructor(private canvas: HTMLCanvasElement) {
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas 2d context not available');
     this.ctx = ctx;
     this.dpr = window.devicePixelRatio || 1;
-    this.theme = theme;
+    this.theme = themeForEra(1);
     this.measureCell();
+  }
+
+  setTheme(theme: EraTheme): void {
+    this.theme = theme;
   }
 
   /** Mede o tamanho de uma célula char usando o ctx do canvas. */
   private measureCell(): void {
-    this.ctx.font = `${FONT_SIZE}px ${MONOSPACE_FONT}`;
+    this.ctx.font = `${this.theme.fontWeight} ${FONT_SIZE}px ${MONOSPACE_FONT}`;
     const metrics = this.ctx.measureText('M');
     this.cellWidth = metrics.width;
     this.cellHeight = FONT_SIZE * LINE_HEIGHT;
@@ -63,7 +51,7 @@ export class AsciiRenderer {
     this.canvas.height = Math.floor(cssHeight * this.dpr);
 
     this.ctx.scale(this.dpr, this.dpr);
-    this.ctx.font = `${FONT_SIZE}px ${MONOSPACE_FONT}`;
+    this.ctx.font = `${this.theme.fontWeight} ${FONT_SIZE}px ${MONOSPACE_FONT}`;
     this.ctx.textBaseline = 'top';
   }
 
@@ -75,7 +63,7 @@ export class AsciiRenderer {
 
     // Foreground text
     this.ctx.fillStyle = this.theme.foreground;
-    this.ctx.font = `${FONT_SIZE}px ${MONOSPACE_FONT}`;
+    this.ctx.font = `${this.theme.fontWeight} ${FONT_SIZE}px ${MONOSPACE_FONT}`;
     this.ctx.textBaseline = 'top';
 
     const lines = grid.toLines();

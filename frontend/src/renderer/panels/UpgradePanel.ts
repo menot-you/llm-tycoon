@@ -6,6 +6,7 @@ import type { UpgradeManager } from '../../engine/upgrades/UpgradeManager';
 import type { GameState } from '../../engine/state/GameState';
 import { formatInt } from '../../lib/numbers';
 import type { Grid } from '../Grid';
+import type { BorderSet } from '../themes';
 import { drawBox } from '../widgets/Box';
 import { drawButton, type ButtonHitBox } from '../widgets/Button';
 
@@ -17,9 +18,10 @@ export function drawUpgradePanel(
   height: number,
   state: GameState,
   upgrades: UpgradeManager,
-  hoveredId: string | null
+  hoveredId: string | null,
+  border?: BorderSet
 ): ButtonHitBox[] {
-  drawBox(grid, x, y, width, height, { title: 'UPGRADES' });
+  drawBox(grid, x, y, width, height, { title: 'UPGRADES', border });
 
   const hitboxes: ButtonHitBox[] = [];
   let row = y + 2;

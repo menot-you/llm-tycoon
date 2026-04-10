@@ -6,6 +6,7 @@ import type { PrestigeManager } from '../../engine/prestige/PrestigeManager';
 import type { GameState } from '../../engine/state/GameState';
 import { formatInt } from '../../lib/numbers';
 import type { Grid } from '../Grid';
+import type { BorderSet } from '../themes';
 import { drawBox } from '../widgets/Box';
 import { drawButton, type ButtonHitBox } from '../widgets/Button';
 
@@ -17,9 +18,10 @@ export function drawPrestigePanel(
   height: number,
   state: GameState,
   prestige: PrestigeManager,
-  hoveredId: string | null
+  hoveredId: string | null,
+  border?: BorderSet
 ): ButtonHitBox[] {
-  drawBox(grid, x, y, width, height, { title: 'PRESTIGE' });
+  drawBox(grid, x, y, width, height, { title: 'PRESTIGE', border });
 
   const hitboxes: ButtonHitBox[] = [];
   const innerX = x + 2;

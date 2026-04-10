@@ -6,6 +6,7 @@ import type { GameState } from '../../engine/state/GameState';
 import { ERAS_BY_ID } from '../../data/eras';
 import { formatInt, formatRate } from '../../lib/numbers';
 import type { Grid } from '../Grid';
+import type { BorderSet } from '../themes';
 import { drawBox } from '../widgets/Box';
 
 export interface ResourceRates {
@@ -22,9 +23,10 @@ export function drawResourceBar(
   y: number,
   width: number,
   state: GameState,
-  rates: ResourceRates
+  rates: ResourceRates,
+  border?: BorderSet
 ): void {
-  drawBox(grid, x, y, width, 4);
+  drawBox(grid, x, y, width, 4, { border });
 
   const era = ERAS_BY_ID[state.era];
   const eraText = `Era ${state.era}/8 — ${era.name}`;

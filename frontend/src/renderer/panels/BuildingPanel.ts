@@ -15,6 +15,7 @@ import type { BuildingManager } from '../../engine/buildings/BuildingManager';
 import type { GameState } from '../../engine/state/GameState';
 import { formatInt } from '../../lib/numbers';
 import type { Grid } from '../Grid';
+import type { BorderSet } from '../themes';
 import { drawBox } from '../widgets/Box';
 import { drawButton, type ButtonHitBox } from '../widgets/Button';
 
@@ -26,9 +27,10 @@ export function drawBuildingPanel(
   height: number,
   state: GameState,
   buildings: BuildingManager,
-  hoveredId: string | null
+  hoveredId: string | null,
+  border?: BorderSet
 ): ButtonHitBox[] {
-  drawBox(grid, x, y, width, height, { title: 'BUILDINGS' });
+  drawBox(grid, x, y, width, height, { title: 'BUILDINGS', border });
 
   const hitboxes: ButtonHitBox[] = [];
   let row = y + 2;

@@ -1,31 +1,26 @@
 /**
- * Box — desenha uma caixa ASCII com bordas Unicode.
+ * Box — desenha uma caixa ASCII com bordas customizáveis.
  *
- *   ┌─────────┐
- *   │  Title  │
- *   ├─────────┤
- *   │ content │
- *   └─────────┘
+ * O border charset muda por era — passado via theme.
  */
 
 import type { Grid } from '../Grid';
+import type { BorderSet } from '../themes';
 
-const BORDERS = {
+const DEFAULT_BORDER: BorderSet = {
   topLeft: '┌',
   topRight: '┐',
   bottomLeft: '└',
   bottomRight: '┘',
   horizontal: '─',
   vertical: '│',
-  cross: '┼',
-  teeDown: '┬',
-  teeUp: '┴',
-  teeRight: '├',
-  teeLeft: '┤',
-} as const;
+  titleDashL: '─',
+  titleDashR: '─',
+};
 
 export interface BoxOptions {
   title?: string;
+  border?: BorderSet;
 }
 
 export function drawBox(
@@ -37,23 +32,24 @@ export function drawBox(
   options: BoxOptions = {}
 ): void {
   if (width < 2 || height < 2) return;
+  const b = options.border ?? DEFAULT_BORDER;
 
   // Cantos
-  grid.setChar(x, y, BORDERS.topLeft);
-  grid.setChar(x + width - 1, y, BORDERS.topRight);
-  grid.setChar(x, y + height - 1, BORDERS.bottomLeft);
-  grid.setChar(x + width - 1, y + height - 1, BORDERS.bottomRight);
+  grid.setChar(x, y, b.topLeft);
+  grid.setChar(x + width - 1, y, b.topRight);
+  grid.setChar(x, y + height - 1, b.bottomLeft);
+  grid.setChar(x + width - 1, y + height - 1, b.bottomRight);
 
   // Bordas horizontais
   for (let i = 1; i < width - 1; i++) {
-    grid.setChar(x + i, y, BORDERS.horizontal);
-    grid.setChar(x + i, y + height - 1, BORDERS.horizontal);
+    grid.setChar(x + i, y, b.horizontal);
+    grid.setChar(x + i, y + height - 1, b.horizontal);
   }
 
   // Bordas verticais
   for (let j = 1; j < height - 1; j++) {
-    grid.setChar(x, y + j, BORDERS.vertical);
-    grid.setChar(x + width - 1, y + j, BORDERS.vertical);
+    grid.setChar(x, y + j, b.vertical);
+    grid.setChar(x + width - 1, y + j, b.vertical);
   }
 
   // Title (opcional)

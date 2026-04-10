@@ -3,6 +3,7 @@
  */
 
 import type { Grid } from '../Grid';
+import type { BorderSet } from '../themes';
 import { drawBox } from '../widgets/Box';
 
 export interface LogEntry {
@@ -46,9 +47,10 @@ export function drawEventLog(
   y: number,
   width: number,
   height: number,
-  store: EventLogStore
+  store: EventLogStore,
+  border?: BorderSet
 ): void {
-  drawBox(grid, x, y, width, height, { title: 'EVENTS' });
+  drawBox(grid, x, y, width, height, { title: 'EVENTS', border });
   const rows = height - 2;
   const entries = store.getRecent(rows);
   const innerX = x + 2;
