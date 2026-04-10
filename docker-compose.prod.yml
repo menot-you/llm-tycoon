@@ -13,14 +13,14 @@ services:
     depends_on:
       - ml
     networks:
-      - llm-tycoon
+      - llm-tycoon       # internal: backend ↔ ml
+      - menot-proxy      # external: caddy reaches us here
     environment:
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=${DATABASE_URL:-}
       - ML_SERVICE_URL=http://llm-tycoon-ml:8000
       - RUST_LOG=${RUST_LOG:-info}
       - BIND_ADDR=0.0.0.0:4000
-    ports:
-      - "127.0.0.1:4000:4000"  # Only localhost — nginx proxies
+    # No host port — Caddy proxies directly via menot-proxy network
 
   ml:
     build:
@@ -35,11 +35,12 @@ services:
       - MODEL_STORE_PATH=/data/models
     volumes:
       - ml_models:/data
-    # No ports exposed — only backend accesses via Docker DNS
 
 networks:
   llm-tycoon:
     driver: bridge
+  menot-proxy:
+    external: true
 
 volumes:
   ml_models:

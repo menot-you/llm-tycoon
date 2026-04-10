@@ -1,7 +1,7 @@
 # Multi-stage Rust release build.
 # Final image: ~25MB alpine + statically-linked binary.
 
-FROM rust:1.85-alpine AS builder
+FROM rust:1.90-alpine AS builder
 RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig
 WORKDIR /app
 COPY server/Cargo.toml server/Cargo.lock ./
