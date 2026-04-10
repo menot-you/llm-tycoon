@@ -41,9 +41,27 @@ cd ml && uv run pytest    # 5 tests
 
 ## Deploy
 
+**Live at https://llm-tycoon.menot.run** (server-authoritative, WebSocket over Cloudflare tunnel).
+
+Stack on `nott`:
+
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+# Clone + build + up
+cd ~/Developer/menot-you && git clone git@github.com:menot-you/llm-tycoon.git
+cd llm-tycoon && docker compose -f docker-compose.prod.yml up -d --build
+
+# Ingress: Cloudflare tunnel → 127.0.0.1:8088 → nginx (client/dist + /socket proxy)
+# Tunnel config managed via Cloudflare API (not local file) under account
+# 02a3067753466663b518421e967fa7f6 tunnel 214ad842-f31e-452e-8a64-93bbaf18e1a6
+#   ingress: llm-tycoon.menot.run → http://127.0.0.1:8088
+
+# Keep containers alive against manual kills (CI runners cleanup):
+#   systemd unit /etc/systemd/system/llm-tycoon.service  (boot)
+#   crontab */2: docker compose up -d (idempotent refresh)
 ```
+
+Client is built on the nott host itself (`cd client && pnpm install && pnpm run build`)
+and served by the `web` nginx container via a read-only volume mount.
 
 See [GAME_CONCEPT.md](./GAME_CONCEPT.md) for the full design.
 
