@@ -12,6 +12,7 @@ import { UpgradeManager } from './upgrades/UpgradeManager';
 import { EraManager } from './eras/EraManager';
 import { PrestigeManager } from './prestige/PrestigeManager';
 import { RebornManager } from './reborn/RebornManager';
+import { AchievementManager } from './achievements/AchievementManager';
 import { SaveManager } from './state/SaveManager';
 import { Ticker } from './ticker';
 import { applyOfflineProgress, type OfflineReport } from './offline';
@@ -38,6 +39,7 @@ export class GameEngine {
   eras: EraManager;
   prestige: PrestigeManager;
   reborn: RebornManager;
+  achievements: AchievementManager;
   ml: MLClient;
   save: SaveManager;
   offlineReport: OfflineReport | null = null;
@@ -58,6 +60,7 @@ export class GameEngine {
     this.prestige = new PrestigeManager();
     this.reborn = new RebornManager();
     this.buildings.setRebornManager(this.reborn);
+    this.achievements = new AchievementManager();
     this.ml = new MLClient();
     this.resources = new ResourceManager(
       this.buildings,
@@ -82,6 +85,11 @@ export class GameEngine {
       undefined,
       this.reborn.hasOfflineMaster(this.state)
     );
+
+    // Touch Grass achievement: 1h+ offline
+    if (this.offlineReport.offlineSeconds >= 3600) {
+      this.achievements.unlock(this.state, 'touch_grass');
+    }
   }
 
   start(renderCb: () => void): void {
@@ -218,6 +226,15 @@ export class GameEngine {
         this.emit({
           kind: 'good',
           message: `ERA ${adv.to}: ${def.title} desbloqueada!`,
+        });
+      }
+
+      // Achievement check (mesma cadencia)
+      const unlocks = this.achievements.check(this.state);
+      for (const u of unlocks) {
+        this.emit({
+          kind: 'good',
+          message: `🏆 ACHIEVEMENT: ${u.def.name} — ${u.def.description}`,
         });
       }
     }

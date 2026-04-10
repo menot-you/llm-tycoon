@@ -15,6 +15,10 @@ export interface ResourceRates {
   hype: number;
   funding: number;
   hallucinationPct: number; // 0-1
+  achievementsUnlocked: number;
+  achievementsTotal: number;
+  rebornCount: number;
+  mlStepsTrained: number;
 }
 
 export function drawResourceBar(
@@ -48,4 +52,12 @@ export function drawResourceBar(
   const total = segments.join('  ').length;
   const startX = Math.max(x + 2, x + Math.floor((width - total) / 2));
   grid.writeText(startX, y + 2, segments.join('  '));
+
+  // Badges: achievements + reborn + ML (canto direito linha 2)
+  const badges: string[] = [];
+  badges.push(`🏆${rates.achievementsUnlocked}/${rates.achievementsTotal}`);
+  if (rates.rebornCount > 0) badges.push(`↻${rates.rebornCount}`);
+  if (rates.mlStepsTrained > 0) badges.push(`ML:${rates.mlStepsTrained}`);
+  const badgeText = badges.join('  ');
+  grid.writeText(x + width - 2 - badgeText.length, y + 2, badgeText);
 }

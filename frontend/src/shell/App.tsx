@@ -337,6 +337,10 @@ export function App() {
           hype: hypeRate,
           funding: fundingRate,
           hallucinationPct: state.resources.hallucinations,
+          achievementsUnlocked: engine.achievements.count(state),
+          achievementsTotal: engine.achievements.total(),
+          rebornCount: state.rebornCount,
+          mlStepsTrained: state.mlStepsTrained,
         },
         theme.border
       );

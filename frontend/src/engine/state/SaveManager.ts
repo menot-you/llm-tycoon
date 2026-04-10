@@ -54,6 +54,14 @@ export class SaveManager {
 
   /** Migra saves antigos pra versão atual. */
   private migrate(state: GameState): GameState {
+    // Backfill defensivo pra campos que podem ter sido adicionados sem bump de version
+    const defaults = createInitialState();
+    for (const key of Object.keys(defaults) as (keyof GameState)[]) {
+      if (state[key] === undefined || state[key] === null) {
+        (state as Record<string, unknown>)[key] = (defaults as Record<string, unknown>)[key];
+      }
+    }
+
     if (state.version === SAVE_VERSION) return state;
 
     // v1 -> v2: adiciona campos de reborn
@@ -68,6 +76,7 @@ export class SaveManager {
         totalPrestigesAllTime: state.prestigeCount ?? 0,
         mlStepsTrained: 0,
         mlCapabilityScore: 0,
+        achievements: [],
       };
       return migrated;
     }

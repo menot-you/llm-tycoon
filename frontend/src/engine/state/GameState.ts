@@ -54,6 +54,9 @@ export interface GameState {
   mlStepsTrained: number; // sincronizado com Python /evaluate
   mlCapabilityScore: number;
 
+  // Achievements
+  achievements: string[]; // ids desbloqueados
+
   // Player identity (PvP)
   playerId: string | null;
   displayName: string;
@@ -85,6 +88,7 @@ export const INITIAL_STATE: GameState = {
   totalPrestigesAllTime: 0,
   mlStepsTrained: 0,
   mlCapabilityScore: 0,
+  achievements: [],
   playerId: null,
   displayName: 'Anonymous Founder',
 };
