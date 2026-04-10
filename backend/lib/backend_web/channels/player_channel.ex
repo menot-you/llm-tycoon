@@ -1,4 +1,4 @@
-defmodule LlmTycoonWeb.PlayerChannel do
+defmodule BackendWeb.PlayerChannel do
   @moduledoc """
   Per-player WebSocket channel.
 
@@ -14,7 +14,7 @@ defmodule LlmTycoonWeb.PlayerChannel do
   - Pedidos de chat
   """
 
-  use LlmTycoonWeb, :channel
+  use BackendWeb, :channel
 
   @impl true
   def join("player:" <> player_id, _payload, socket) do
