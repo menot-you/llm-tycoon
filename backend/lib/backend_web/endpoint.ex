@@ -11,9 +11,9 @@ defmodule BackendWeb.Endpoint do
     same_site: "Lax"
   ]
 
-  # socket "/live", Phoenix.LiveView.Socket,
-  #   websocket: [connect_info: [session: @session_options]],
-  #   longpoll: [connect_info: [session: @session_options]]
+  socket "/socket", BackendWeb.UserSocket,
+    websocket: [check_origin: false],
+    longpoll: false
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -31,7 +31,7 @@ defmodule BackendWeb.Endpoint do
   # :code_reloader configuration of your endpoint.
   if code_reloading? do
     plug Phoenix.CodeReloader
-    plug Phoenix.Ecto.CheckRepoStatus, otp_app: :backend
+    # Wave 5: Repo desabilitado, sem check de status
   end
 
   plug Plug.RequestId

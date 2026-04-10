@@ -7,16 +7,17 @@ defmodule Backend.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      BackendWeb.Telemetry,
-      Backend.Repo,
-      {DNSCluster, query: Application.get_env(:backend, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: Backend.PubSub},
-      # Start a worker by calling: Backend.Worker.start_link(arg)
-      # {Backend.Worker, arg},
-      # Start to serve requests, typically the last entry
-      BackendWeb.Endpoint
-    ]
+    # Wave 5: in-memory only. Repo desabilitado temporariamente
+    # (será reativado na Wave 6/7 quando implementarmos persistência).
+    children =
+      [
+        BackendWeb.Telemetry,
+        {DNSCluster, query: Application.get_env(:backend, :dns_cluster_query) || :ignore},
+        {Phoenix.PubSub, name: Backend.PubSub},
+        Backend.Leaderboard,
+        Backend.Espionage,
+        BackendWeb.Endpoint
+      ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

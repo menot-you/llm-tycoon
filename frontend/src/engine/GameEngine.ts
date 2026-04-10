@@ -109,6 +109,21 @@ export class GameEngine {
     return this.prestige.buyPermanent(this.state, id);
   }
 
+  /** Capability score para ranking PvP. */
+  getCapabilityScore(): number {
+    const baseRate = this.resources.getEffectiveTokenRate(this.state);
+    const totalOwned = Object.values(this.state.buildings).reduce(
+      (sum, n) => sum + (n ?? 0),
+      0
+    );
+    const prestigeFactor = 1 + this.state.prestigeCount * 0.5;
+    return Math.floor(
+      (baseRate * 10 + totalOwned * 100 + this.state.totalTokensEarned * 0.001) *
+        prestigeFactor *
+        this.state.era
+    );
+  }
+
   doPrestige(): number {
     if (!this.prestige.canPrestige(this.state)) return 0;
     const { pointsGained } = this.prestige.prestige(this.state);

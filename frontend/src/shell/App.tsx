@@ -30,6 +30,15 @@ import {
   drawPrestigePanel,
   parsePermanentUpgradeId,
 } from '../renderer/panels/PrestigePanel';
+import {
+  drawLeaderboard,
+  parseTargetButton,
+  parseActionButton,
+} from '../renderer/panels/Leaderboard';
+import {
+  PhoenixClient,
+  type LeaderboardEntry,
+} from '../network/PhoenixClient';
 import { drawBox } from '../renderer/widgets/Box';
 import { drawButton, type ButtonHitBox } from '../renderer/widgets/Button';
 import { drawSparkline } from '../renderer/widgets/Sparkline';
@@ -87,7 +96,38 @@ export function App() {
     let lastHistoryUpdate = 0;
     let lastTime = performance.now();
     let prestigeOpen = false;
+    let leaderboardOpen = false;
     let lastEra: EraId = engine.state.era as EraId;
+
+    // --- PvP: conecta no backend Elixir ---
+    if (!engine.state.playerId) {
+      engine.state.playerId = crypto.randomUUID();
+    }
+    const pvp = new PhoenixClient(engine.state.playerId);
+    let leaderboardData: LeaderboardEntry[] = [];
+    let selectedTargetId: string | null = null;
+    let pvpStatus: string = 'offline';
+
+    pvp.onStatus((s) => {
+      pvpStatus = s;
+      events.push(`pvp: ${s}`, s === 'connected' ? 'good' : 'info');
+    });
+    pvp.onLeaderboard((top) => {
+      leaderboardData = top;
+    });
+    pvp.connect();
+
+    // Sync periódico
+    const syncInterval = setInterval(() => {
+      if (pvp.isConnected()) {
+        pvp.sync({
+          display_name: engine.state.displayName,
+          capability_score: engine.getCapabilityScore(),
+          era: engine.state.era,
+          prestige_count: engine.state.prestigeCount,
+        });
+      }
+    }, 3000);
 
     const applyTheme = (newTheme: typeof theme) => {
       theme = newTheme;
@@ -100,6 +140,12 @@ export function App() {
     input.onClickHandler((id) => {
       if (id === 'toggle_prestige') {
         prestigeOpen = !prestigeOpen;
+        leaderboardOpen = false;
+        return;
+      }
+      if (id === 'toggle_leaderboard') {
+        leaderboardOpen = !leaderboardOpen;
+        prestigeOpen = false;
         return;
       }
       if (id === 'prestige:go') {
@@ -112,7 +158,29 @@ export function App() {
         engine.buyPermanentUpgrade(permId);
         return;
       }
-      if (prestigeOpen) return;
+
+      // Leaderboard overlay
+      const targetId = parseTargetButton(id);
+      if (targetId) {
+        selectedTargetId = selectedTargetId === targetId ? null : targetId;
+        return;
+      }
+      const actionId = parseActionButton(id);
+      if (actionId && selectedTargetId) {
+        pvp.espionage(selectedTargetId, actionId).then((result) => {
+          if ('error' in result) {
+            events.push(`espionage ${actionId}: ${result.error}`, 'warn');
+          } else {
+            events.push(
+              `espionage ${actionId}: ${result.success ? 'success' : 'failed'} — ${result.effect}`,
+              result.success ? 'good' : 'warn'
+            );
+          }
+        });
+        return;
+      }
+
+      if (prestigeOpen || leaderboardOpen) return;
 
       if (id === 'click_token') {
         engine.click();
@@ -137,8 +205,16 @@ export function App() {
     });
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'p' || e.key === 'P') prestigeOpen = !prestigeOpen;
-      else if (e.key === 'Escape') prestigeOpen = false;
+      if (e.key === 'p' || e.key === 'P') {
+        prestigeOpen = !prestigeOpen;
+        leaderboardOpen = false;
+      } else if (e.key === 'l' || e.key === 'L') {
+        leaderboardOpen = !leaderboardOpen;
+        prestigeOpen = false;
+      } else if (e.key === 'Escape') {
+        prestigeOpen = false;
+        leaderboardOpen = false;
+      }
     };
     window.addEventListener('keydown', onKey);
 
@@ -245,15 +321,48 @@ export function App() {
       // Glitch effect em cima de tudo
       glitch.apply(grid);
 
-      // Toggle prestige button (topo direito)
+      // Toggle buttons (footer direito)
       const togglePrestigeHb = drawButton(
         grid,
-        GRID_COLS - 16,
+        GRID_COLS - 30,
         GRID_ROWS - 1,
         'PRESTIGE [P]',
         'toggle_prestige',
         { hovered: input.getHoveredId() === 'toggle_prestige' }
       );
+      const toggleLeaderboardHb = drawButton(
+        grid,
+        GRID_COLS - 14,
+        GRID_ROWS - 1,
+        'PvP [L]',
+        'toggle_leaderboard',
+        { hovered: input.getHoveredId() === 'toggle_leaderboard' }
+      );
+
+      let leaderboardHitboxes: ButtonHitBox[] = [];
+      if (leaderboardOpen) {
+        const ox = 10;
+        const oy = 4;
+        const ow = GRID_COLS - 20;
+        const oh = GRID_ROWS - 8;
+        for (let yy = oy; yy < oy + oh; yy++) {
+          for (let xx = ox; xx < ox + ow; xx++) {
+            grid.setChar(xx, yy, ' ');
+          }
+        }
+        leaderboardHitboxes = drawLeaderboard(
+          grid,
+          ox,
+          oy,
+          ow,
+          oh,
+          leaderboardData,
+          selectedTargetId,
+          pvpStatus,
+          input.getHoveredId(),
+          theme.border
+        );
+      }
 
       let prestigeHitboxes: ButtonHitBox[] = [];
       if (prestigeOpen) {
@@ -280,8 +389,16 @@ export function App() {
       }
 
       const frameHitboxes: ButtonHitBox[] = prestigeOpen
-        ? [togglePrestigeHb, ...prestigeHitboxes]
-        : [clickHb, ...buildingHitboxes, ...upgradeHitboxes, togglePrestigeHb];
+        ? [togglePrestigeHb, toggleLeaderboardHb, ...prestigeHitboxes]
+        : leaderboardOpen
+          ? [togglePrestigeHb, toggleLeaderboardHb, ...leaderboardHitboxes]
+          : [
+              clickHb,
+              ...buildingHitboxes,
+              ...upgradeHitboxes,
+              togglePrestigeHb,
+              toggleLeaderboardHb,
+            ];
       input.setHitboxes(frameHitboxes);
 
       renderer.render(grid);
@@ -292,6 +409,8 @@ export function App() {
     return () => {
       engine.stop();
       input.destroy();
+      pvp.disconnect();
+      clearInterval(syncInterval);
       window.removeEventListener('keydown', onKey);
     };
   }, []);
