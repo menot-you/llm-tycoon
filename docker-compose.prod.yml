@@ -27,10 +27,15 @@ services:
     container_name: llm-tycoon-web
     restart: unless-stopped
     networks:
+      - llm-tycoon     # same network as backend for DNS resolution
       - menot-proxy
     volumes:
       - ./client/dist:/usr/share/nginx/html:ro
       - ./deploy/web.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      # Bind to 127.0.0.1 so only the local cloudflared tunnel can reach it.
+      # Using 8088 to avoid the k3s DNAT 0.0.0.0/0:80 → traefik rule.
+      - "127.0.0.1:8088:80"
 
   ml:
     build:
