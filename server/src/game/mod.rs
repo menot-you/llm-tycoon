@@ -8,6 +8,12 @@
 //! 3. Separation of concerns — PlayerActor só orquestra, não decide
 //!
 //! Veja `/GAME_CONCEPT.md` na raiz do repo para o contrato canônico.
+//!
+//! Muitas funções aqui são "accessors" (can_afford, preview_points,
+//! has_offline_master, etc) que vão ser consumidas pela API quando o client
+//! chamar `GET /state/:player_id`. Por isso carregam `#[allow(dead_code)]`
+//! preemptivamente — são parte do contrato público, não código morto.
+#![allow(dead_code)]
 
 pub mod data;
 pub mod formulas;

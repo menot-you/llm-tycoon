@@ -13,6 +13,7 @@ tokio = { version = "1.42", features = ["full"] }
 axum = { version = "0.8", features = ["ws", "macros"] }
 tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.6", features = ["cors", "trace"] }
+futures-util = "0.3"
 
 # Actor framework (Erlang-style, tipo GenServer)
 ractor = { version = "0.15" }
