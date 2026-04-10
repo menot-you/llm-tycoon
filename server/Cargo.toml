@@ -1,0 +1,57 @@
+[package]
+name = "llm-tycoon-server"
+version = "0.1.0"
+edition = "2024"
+description = "LLM Tycoon — server-authoritative game server. See /GAME_CONCEPT.md for design."
+license = "MIT"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.42", features = ["full"] }
+
+# HTTP + WebSocket
+axum = { version = "0.8", features = ["ws", "macros"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+
+# Actor framework (Erlang-style, tipo GenServer)
+ractor = { version = "0.15" }
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "json", "macros"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# HTTP client (pro ML Python service)
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# Logs
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# Utils
+uuid = { version = "1.11", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+rand = "0.8"
+thiserror = "2.0"
+anyhow = "1.0"
+dotenvy = "0.15"
+
+# TS types generation (single source of truth pro frontend)
+ts-rs = { version = "10", features = ["chrono-impl", "uuid-impl", "serde-compat"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+opt-level = 3
+
+# Pra builds incrementais mais rápidos durante dev
+[profile.dev]
+opt-level = 0
+debug = 1
