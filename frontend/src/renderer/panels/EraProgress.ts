@@ -30,7 +30,6 @@ export function drawEraProgress(
   drawProgressBar(grid, x, y + 1, width, progress, { showPercent: true });
 
   if (next) {
-    const rem = next.unlockThreshold - state.totalTokensEarned;
     const info = `${formatInt(state.totalTokensEarned)} / ${formatInt(next.unlockThreshold)} tokens earned`;
     grid.writeText(x, y + 2, info.substring(0, width));
   }

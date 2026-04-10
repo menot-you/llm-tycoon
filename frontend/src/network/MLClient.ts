@@ -5,7 +5,12 @@
  * Fallback gracioso se o service não tá rodando.
  */
 
-const DEFAULT_BASE = 'http://localhost:8000';
+const ENV_BASE = import.meta.env.VITE_ML_URL as string | undefined;
+const DEFAULT_BASE = ENV_BASE && ENV_BASE.length > 0
+  ? ENV_BASE
+  : typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:8000'
+    : ''; // vazio = desabilitado em produção
 
 export interface TrainResult {
   loss: number;
@@ -37,6 +42,11 @@ export class MLClient {
 
   async ping(): Promise<boolean> {
     if (this.checked) return this.available;
+    if (!this.base) {
+      this.available = false;
+      this.checked = true;
+      return false;
+    }
     try {
       const res = await fetch(`${this.base}/health`, { signal: AbortSignal.timeout(1500) });
       this.available = res.ok;

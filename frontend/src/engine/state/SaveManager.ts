@@ -56,9 +56,11 @@ export class SaveManager {
   private migrate(state: GameState): GameState {
     // Backfill defensivo pra campos que podem ter sido adicionados sem bump de version
     const defaults = createInitialState();
-    for (const key of Object.keys(defaults) as (keyof GameState)[]) {
-      if (state[key] === undefined || state[key] === null) {
-        (state as Record<string, unknown>)[key] = (defaults as Record<string, unknown>)[key];
+    const stateAny = state as unknown as Record<string, unknown>;
+    const defaultsAny = defaults as unknown as Record<string, unknown>;
+    for (const key of Object.keys(defaultsAny)) {
+      if (stateAny[key] === undefined || stateAny[key] === null) {
+        stateAny[key] = defaultsAny[key];
       }
     }
 

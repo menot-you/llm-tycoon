@@ -4,7 +4,6 @@
 
 import type { RebornManager } from '../../engine/reborn/RebornManager';
 import type { GameState } from '../../engine/state/GameState';
-import { formatInt } from '../../lib/numbers';
 import type { Grid } from '../Grid';
 import type { BorderSet } from '../themes';
 import { drawBox } from '../widgets/Box';

@@ -27,7 +27,12 @@ export interface EspionageResult {
 export type LeaderboardCallback = (top: LeaderboardEntry[]) => void;
 export type StatusCallback = (status: 'connecting' | 'connected' | 'error' | 'offline') => void;
 
-const DEFAULT_ENDPOINT = 'ws://localhost:4000/socket';
+const ENV_ENDPOINT = import.meta.env.VITE_PHOENIX_URL as string | undefined;
+const DEFAULT_ENDPOINT = ENV_ENDPOINT && ENV_ENDPOINT.length > 0
+  ? ENV_ENDPOINT
+  : typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'ws://localhost:4000/socket'
+    : ''; // vazio = desabilitado em produção sem backend
 
 export class PhoenixClient {
   private socket: Socket | null = null;
@@ -51,6 +56,11 @@ export class PhoenixClient {
 
   connect(endpoint = DEFAULT_ENDPOINT): void {
     if (this.socket) return;
+    if (!endpoint) {
+      // Backend desabilitado (prod sem VITE_PHOENIX_URL)
+      this.statusCb?.('offline');
+      return;
+    }
     this.statusCb?.('connecting');
     this.socket = new Socket(endpoint, { params: {} });
 
