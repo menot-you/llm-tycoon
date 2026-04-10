@@ -22,6 +22,10 @@ import {
 } from '../renderer/panels/UpgradePanel';
 import { EventLogStore, drawEventLog } from '../renderer/panels/EventLog';
 import { drawEraProgress } from '../renderer/panels/EraProgress';
+import {
+  drawPrestigePanel,
+  parsePermanentUpgradeId,
+} from '../renderer/panels/PrestigePanel';
 import { formatDuration } from '../engine/offline';
 import { drawBox } from '../renderer/widgets/Box';
 import { drawButton, type ButtonHitBox } from '../renderer/widgets/Button';
@@ -65,8 +69,25 @@ export function App() {
     const rateHistory: number[] = [];
     let lastHistoryUpdate = 0;
     let lastTime = performance.now();
+    let prestigeOpen = false;
 
     input.onClickHandler((id) => {
+      if (id === 'toggle_prestige') {
+        prestigeOpen = !prestigeOpen;
+        return;
+      }
+      if (id === 'prestige:go') {
+        const gained = engine.doPrestige();
+        if (gained > 0) prestigeOpen = false;
+        return;
+      }
+      const permId = parsePermanentUpgradeId(id);
+      if (permId) {
+        engine.buyPermanentUpgrade(permId);
+        return;
+      }
+      if (prestigeOpen) return; // overlay consome outros cliques
+
       if (id === 'click_token') {
         engine.click();
         particles.spawn(GRID_COLS / 2, 10, 3);
@@ -86,6 +107,16 @@ export function App() {
         if (ok && def) events.push(`upgrade: ${def.name}`, 'good');
       }
     });
+
+    // Atalho de teclado: P abre/fecha prestige
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'p' || e.key === 'P') {
+        prestigeOpen = !prestigeOpen;
+      } else if (e.key === 'Escape') {
+        prestigeOpen = false;
+      }
+    };
+    window.addEventListener('keydown', onKey);
 
     const draw = () => {
       const now = performance.now();
@@ -172,11 +203,43 @@ export function App() {
       matrix.draw(grid);
       particles.draw(grid);
 
-      const frameHitboxes: ButtonHitBox[] = [
-        clickHb,
-        ...buildingHitboxes,
-        ...upgradeHitboxes,
-      ];
+      // Toggle prestige button (topo direito)
+      const togglePrestigeHb = drawButton(
+        grid,
+        GRID_COLS - 16,
+        GRID_ROWS - 1,
+        'PRESTIGE [P]',
+        'toggle_prestige',
+        { hovered: input.getHoveredId() === 'toggle_prestige' }
+      );
+
+      let prestigeHitboxes: ButtonHitBox[] = [];
+      if (prestigeOpen) {
+        // Overlay modal (clear the inner area first)
+        const ox = 10;
+        const oy = 4;
+        const ow = GRID_COLS - 20;
+        const oh = GRID_ROWS - 8;
+        for (let yy = oy; yy < oy + oh; yy++) {
+          for (let xx = ox; xx < ox + ow; xx++) {
+            grid.setChar(xx, yy, ' ');
+          }
+        }
+        prestigeHitboxes = drawPrestigePanel(
+          grid,
+          ox,
+          oy,
+          ow,
+          oh,
+          state,
+          engine.prestige,
+          input.getHoveredId()
+        );
+      }
+
+      const frameHitboxes: ButtonHitBox[] = prestigeOpen
+        ? [togglePrestigeHb, ...prestigeHitboxes]
+        : [clickHb, ...buildingHitboxes, ...upgradeHitboxes, togglePrestigeHb];
       input.setHitboxes(frameHitboxes);
 
       renderer.render(grid);
@@ -187,6 +250,7 @@ export function App() {
     return () => {
       engine.stop();
       input.destroy();
+      window.removeEventListener('keydown', onKey);
     };
   }, []);
 

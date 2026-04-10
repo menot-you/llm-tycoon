@@ -10,6 +10,7 @@ import { BuildingManager } from './buildings/BuildingManager';
 import { ResourceManager } from './resources/ResourceManager';
 import { UpgradeManager } from './upgrades/UpgradeManager';
 import { EraManager } from './eras/EraManager';
+import { PrestigeManager } from './prestige/PrestigeManager';
 import { SaveManager } from './state/SaveManager';
 import { Ticker } from './ticker';
 import { applyOfflineProgress, type OfflineReport } from './offline';
@@ -33,6 +34,7 @@ export class GameEngine {
   upgrades: UpgradeManager;
   resources: ResourceManager;
   eras: EraManager;
+  prestige: PrestigeManager;
   save: SaveManager;
   offlineReport: OfflineReport | null = null;
 
@@ -49,7 +51,8 @@ export class GameEngine {
     this.state = this.save.load();
     this.buildings = new BuildingManager();
     this.upgrades = new UpgradeManager();
-    this.resources = new ResourceManager(this.buildings, this.upgrades);
+    this.prestige = new PrestigeManager();
+    this.resources = new ResourceManager(this.buildings, this.upgrades, this.prestige);
     this.eras = new EraManager();
     this.ticker = new Ticker(
       (delta) => this.tick(delta),
@@ -100,6 +103,20 @@ export class GameEngine {
 
   buyUpgrade(id: string): boolean {
     return this.upgrades.buy(this.state, id).success;
+  }
+
+  buyPermanentUpgrade(id: string): boolean {
+    return this.prestige.buyPermanent(this.state, id);
+  }
+
+  doPrestige(): number {
+    if (!this.prestige.canPrestige(this.state)) return 0;
+    const { pointsGained } = this.prestige.prestige(this.state);
+    this.emit({
+      kind: 'good',
+      message: `NEW PARADIGM: +${pointsGained} Insight Points. Prestige #${this.state.prestigeCount}`,
+    });
+    return pointsGained;
   }
 
   click(): void {
