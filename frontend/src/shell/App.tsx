@@ -21,6 +21,8 @@ import {
   parseUpgradeButtonId,
 } from '../renderer/panels/UpgradePanel';
 import { EventLogStore, drawEventLog } from '../renderer/panels/EventLog';
+import { drawEraProgress } from '../renderer/panels/EraProgress';
+import { formatDuration } from '../engine/offline';
 import { drawBox } from '../renderer/widgets/Box';
 import { drawButton, type ButtonHitBox } from '../renderer/widgets/Button';
 import { drawSparkline } from '../renderer/widgets/Sparkline';
@@ -45,6 +47,20 @@ export function App() {
     const matrix = new MatrixRain(GRID_COLS, GRID_ROWS, 0.08);
     const events = new EventLogStore(50);
     events.push('Bem-vindo ao LLM Tycoon. Clique em GENERATE TOKEN pra começar.', 'info');
+
+    // Offline report
+    if (engine.offlineReport && engine.offlineReport.tokensEarned > 0) {
+      const r = engine.offlineReport;
+      events.push(
+        `Welcome back: +${Math.floor(r.tokensEarned)} tokens em ${formatDuration(r.offlineSeconds)} offline (${Math.floor(r.efficiency * 100)}%)`,
+        'good'
+      );
+    }
+
+    // Listen pra engine events
+    engine.onEvent((e) => {
+      events.push(e.message, e.kind);
+    });
 
     const rateHistory: number[] = [];
     let lastHistoryUpdate = 0;
@@ -103,24 +119,25 @@ export function App() {
         hallucinationPct: state.resources.hallucinations,
       });
 
-      // Center clicker box
+      // Center clicker box (with era progress)
       const centerX = Math.floor(GRID_COLS / 2);
-      drawBox(grid, centerX - 22, 5, 44, 8, { title: 'YOUR MODEL' });
+      drawBox(grid, centerX - 24, 5, 48, 9, { title: 'YOUR MODEL' });
       const tokensStr = formatInt(state.resources.tokens);
       grid.writeText(centerX - Math.floor(tokensStr.length / 2), 7, tokensStr);
       grid.writeText(centerX - 8, 8, 'TOKENS GENERATED');
-      drawSparkline(grid, centerX - 20, 9, 40, rateHistory);
+      drawSparkline(grid, centerX - 22, 9, 44, rateHistory);
+      drawEraProgress(grid, centerX - 22, 10, 44, state, engine.eras);
       const clickHb = drawButton(
         grid,
         centerX - 9,
-        11,
+        13,
         'GENERATE TOKEN',
         'click_token',
         { hovered: input.getHoveredId() === 'click_token' }
       );
 
       // Left side: buildings
-      const panelY = 14;
+      const panelY = 15;
       const panelHeight = GRID_ROWS - panelY - 8;
       const leftWidth = Math.floor(GRID_COLS * 0.58);
       const buildingHitboxes = drawBuildingPanel(
