@@ -1,0 +1,45 @@
+# Production compose for nott server.
+# Backend (Rust) + ML (Python) on internal Docker network.
+# Frontend deployed separately on Vercel.
+# DB is external Supabase Postgres (DATABASE_URL env var).
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: deploy/backend.Dockerfile
+    container_name: llm-tycoon-api
+    restart: unless-stopped
+    depends_on:
+      - ml
+    networks:
+      - llm-tycoon
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - ML_SERVICE_URL=http://llm-tycoon-ml:8000
+      - RUST_LOG=${RUST_LOG:-info}
+      - BIND_ADDR=0.0.0.0:4000
+    ports:
+      - "127.0.0.1:4000:4000"  # Only localhost — nginx proxies
+
+  ml:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile
+    container_name: llm-tycoon-ml
+    restart: unless-stopped
+    networks:
+      - llm-tycoon
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - MODEL_STORE_PATH=/data/models
+    volumes:
+      - ml_models:/data
+    # No ports exposed — only backend accesses via Docker DNS
+
+networks:
+  llm-tycoon:
+    driver: bridge
+
+volumes:
+  ml_models:
