@@ -8,6 +8,7 @@
 import { UI_UPDATE_RATE } from '../lib/constants';
 import { BuildingManager } from './buildings/BuildingManager';
 import { ResourceManager } from './resources/ResourceManager';
+import { UpgradeManager } from './upgrades/UpgradeManager';
 import { SaveManager } from './state/SaveManager';
 import { Ticker } from './ticker';
 import type { BuildingId } from '../data/buildings';
@@ -18,6 +19,7 @@ type StateListener = (state: GameState) => void;
 export class GameEngine {
   state: GameState;
   buildings: BuildingManager;
+  upgrades: UpgradeManager;
   resources: ResourceManager;
   save: SaveManager;
   private ticker: Ticker;
@@ -29,7 +31,8 @@ export class GameEngine {
     this.save = new SaveManager();
     this.state = this.save.load();
     this.buildings = new BuildingManager();
-    this.resources = new ResourceManager(this.buildings);
+    this.upgrades = new UpgradeManager();
+    this.resources = new ResourceManager(this.buildings, this.upgrades);
     this.ticker = new Ticker(
       (delta) => this.tick(delta),
       () => this.render()
@@ -63,8 +66,13 @@ export class GameEngine {
     return this.buildings.buy(this.state, id).success;
   }
 
+  buyUpgrade(id: string): boolean {
+    return this.upgrades.buy(this.state, id).success;
+  }
+
   click(): void {
-    this.resources.addTokens(this.state, 1);
+    const bonus = Math.max(1, this.upgrades.getTokensMultiplier(this.state));
+    this.resources.addTokens(this.state, bonus);
   }
 
   // ============================================================
