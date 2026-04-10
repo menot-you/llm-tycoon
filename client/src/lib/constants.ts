@@ -10,13 +10,22 @@ export const FONT_SIZE = 14;
 export const LINE_HEIGHT = 1.2;
 
 /**
- * Endpoint do WebSocket. Configurável via `VITE_WS_URL`.
+ * Endpoint do WebSocket.
  *
- * Em dev (localhost), default: `ws://localhost:4000/socket`.
- * Em prod (Vercel), precisa ser setado: `wss://api.llm-tycoon.menot.run/socket`.
+ * - Dev (localhost): `ws://localhost:4000/socket` (backend direto).
+ * - Prod: `{wss|ws}://{current_host}/socket` — mesmo domain do client,
+ *   Caddy proxy dispatcha pro backend container.
+ *
+ * Override via `VITE_WS_URL` se necessário.
  */
-export const WS_URL: string =
-  (import.meta.env.VITE_WS_URL as string | undefined) ??
-  (typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "ws://localhost:4000/socket"
-    : "");
+export const WS_URL: string = (() => {
+  const override = import.meta.env.VITE_WS_URL as string | undefined;
+  if (override && override.length > 0) return override;
+  if (typeof window === "undefined") return "";
+  const { protocol, host, hostname } = window.location;
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    return "ws://localhost:4000/socket";
+  }
+  const wsProto = protocol === "https:" ? "wss:" : "ws:";
+  return `${wsProto}//${host}/socket`;
+})();
