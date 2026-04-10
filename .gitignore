@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Elixir
+backend/_build/
+backend/deps/
+backend/*.ez
+backend/priv/static/assets/
+backend/erl_crash.dump
+backend/.elixir_ls/
+backend/.lexical/
+
+# Python
+ml/.venv/
+ml/__pycache__/
+ml/**/__pycache__/
+ml/**/*.pyc
+ml/.pytest_cache/
+ml/.ruff_cache/
+ml/.mypy_cache/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Model weights (dev)
+ml_data/
+models/*.pt
+models/*.bin
+
+# Docker
+docker-volumes/
